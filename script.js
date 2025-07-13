@@ -7,6 +7,7 @@ class SudokuGame {
         this.timer = 0;
         this.timerInterval = null;
         this.difficulty = 'easy';
+        this.forceDifficultyNumbers = true; // 默认强制使用难度数字
         
         this.initializeGame();
         this.setupEventListeners();
@@ -204,16 +205,26 @@ class SudokuGame {
     }
 
     getCellsToRemove() {
-        // 获取用户自定义的数字数量
-        const customNumber = parseInt(document.getElementById('custom-number').value);
-        const validNumber = Math.max(17, Math.min(81, customNumber)); // 确保在17-81范围内
+        // 检查是否显示自定义数字输入框
+        const customNumbers = document.getElementById('custom-numbers');
         
-        // 更新输入框的值（如果用户输入了无效值）
-        if (customNumber !== validNumber) {
-            document.getElementById('custom-number').value = validNumber;
+        // 如果强制使用难度数字，或者自定义数字输入框隐藏，则使用难度对应的数字
+        if (this.forceDifficultyNumbers || customNumbers.style.display === 'none') {
+            // 根据难度确定数字数量
+            let givenNumber;
+            switch (this.difficulty) {
+                case 'easy': givenNumber = 41; break;
+                case 'medium': givenNumber = 31; break;
+                case 'hard': givenNumber = 21; break;
+                default: givenNumber = 41;
+            }
+            return 81 - givenNumber;
+        } else {
+            // 使用自定义数字
+            const customNumber = parseInt(document.getElementById('custom-number').value);
+            const validNumber = Math.max(17, Math.min(81, customNumber));
+            return 81 - validNumber;
         }
-        
-        return 81 - validNumber; // 返回需要移除的数字数量
     }
 
     renderGrid() {
@@ -453,12 +464,19 @@ class SudokuGame {
         // 难度选择
         document.getElementById('difficulty').addEventListener('change', (e) => {
             this.difficulty = e.target.value;
+            // 强制使用对应难度的数字数量，忽略自定义数字
+            this.forceDifficultyNumbers = true;
             this.newGame();
         });
 
         // 自定义数字输入
         document.getElementById('custom-number').addEventListener('change', () => {
-            this.newGame();
+            // 只有在显示时才生效
+            if (document.getElementById('custom-numbers').style.display !== 'none') {
+                // 用户修改了自定义数字，取消强制使用难度数字
+                this.forceDifficultyNumbers = false;
+                this.newGame();
+            }
         });
 
         // 自定义数字输入验证
@@ -470,10 +488,32 @@ class SudokuGame {
                 e.target.value = 81;
             }
         });
+
+        // 测试者入口：按211显示/隐藏数字输入框
+        let keySequence = '';
+        document.addEventListener('keydown', (e) => {
+            keySequence += e.key;
+            if (keySequence.length > 3) {
+                keySequence = keySequence.slice(-3);
+            }
+            
+            if (keySequence === '211') {
+                const customNumbers = document.getElementById('custom-numbers');
+                if (customNumbers.style.display === 'none') {
+                    customNumbers.style.display = 'flex';
+                } else {
+                    customNumbers.style.display = 'none';
+                }
+                keySequence = '';
+            }
+        });
     }
 
     newGame() {
         this.selectedCell = null;
+        // 重置为简单难度
+        this.difficulty = 'easy';
+        document.getElementById('difficulty').value = 'easy';
         this.generateSudoku();
         this.renderGrid();
         this.resetTimer();
